@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 rand = "*"
 time = "*"
+midir = "0.7.0"
 
 [dependencies.fluidsynth]
 git = "https://github.com/tayloredwebsites/rust-fluidsynth"
