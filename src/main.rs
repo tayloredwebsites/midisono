@@ -7,7 +7,7 @@ use fluidsynth::settings::Settings as FluidSettings;
 use fluidsynth::synth::Synth as FluidSynth;
 use fluidsynth::audio::AudioDriver as FluidAudio;
 
-// use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng};
 use std::thread;
 use std::time::Duration;
 // use async_std::task;
@@ -37,7 +37,7 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
 
-    let (tx_from_midi, rx_to_run) = mpsc::channel::<[u8; 3]>();
+    let (tx_from_midi, rx_to_synth) = mpsc::channel::<[u8; 3]>();
 
     // create the default synthesizer settings
     let mut settings = FluidSettings::new();
@@ -67,40 +67,56 @@ fn run() -> Result<(), Box<dyn Error>> {
     // let _conn_in = thread::spawn(move || {
     //     midi_in.connect(&in_port, &in_port_name, move |stamp, message, _| {
         let _conn_in = midi_in.connect(&in_port, &in_port_name, move |stamp, message, _| {
-            const NOTE_ON: u8 = 149;
-            const NOTE_OFF: u8 = 133;
-            let note: i32 = message[1] as i32;
-            let force: i32 = message[2] as i32;
-            if message[0] == NOTE_ON {
-                // syn.noteon(0, note, force);
-                println!("Note on for {} with force {}", note, force)
-            } else if message[0] == NOTE_OFF {
-                // syn.noteoff(0, note);
-                println!("Note off for {}", force)
-            } else {
-                println!("message else");
-            }
-            println!("{}: {:?} (len = {})", stamp, message, message.len());
             let msg = [message[0].clone(), message[1].clone(), message[2].clone()];
             // tx_from_midi.send(msg).unwrap_or_else(|_error) => | println!("Error when forwarding message ..."));
+            tx_from_midi.send(msg).unwrap();
             // task::sleep(Duration::from_millis(1)).await;   // async sleep function to unblock loop
             thread::sleep(Duration::from_millis(1));   // blocking sleep function
         }, ());  // close midi_in.connect  Note: no ? cannot use in a closure that returns '()'
     // });  // close thread::spawn
 
     // }, ())?;
+
+    // let tx_console = tx_from_midi.clone();
+    // thread::spawn( || {
+    //     println!("Connection open, reading input from '{}' (press enter to exit) ...", &in_port_name);
+    //     input.clear();
+    //     stdin().read_line(&mut input); // wait for next enter key press
+    //     println!("to close MIDI connection");
+    //     let msg: Vec<u8> = vec![0, 0, 0];
+    // });
+
+
+    // confirm synthesizer plays notes
+    for _x in 0..12 {
+        let num: i32 = thread_rng().gen_range(0..12);
+        let key = 60 + num;
+        syn.noteon(0, key, 80);
+        thread::sleep(Duration::from_millis(100));
+        syn.noteoff(0, key);
+    }
+
+    // need to get shut down message 
+    for message in rx_to_synth {
+        println!("Got: {:#?}", message);
+        let [msg, note, force] = message;
+        const NOTE_ON: u8 = 149;
+        const NOTE_OFF: u8 = 133;
+        let note: i32 = note as i32;
+        let force: i32 = force as i32;
+       println!("msg: {:?}, NOTE_ON: {:?}, NOTE_OFF: {:?} ", msg, NOTE_ON, NOTE_OFF);
+        if msg == NOTE_ON {
+            syn.noteon(0, note, force);
+            println!("Note on for {} with force {}", note, force)
+        } else if msg == NOTE_OFF {
+            syn.noteoff(0, note);
+            println!("Note off for {}", force)
+        } else {
+            println!("message else");
+        }
+        println!("{}: {:?} {:?} (len = {})", msg, note, force, message.len());
+    }
     
-    println!("Connection open, reading input from '{}' (press enter to exit) ...", &in_port_name);
-
-    input.clear();
-    stdin().read_line(&mut input)?; // wait for next enter key press
-
-    // for message in rx_to_run {
-    //     println!("Got: {:#?}", message);
-    // }
-
-
-    println!("Closing MIDI connection");
 
     // // confirm synthesizer plays notes
     // for _x in 0..12 {
