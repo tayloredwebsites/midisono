@@ -11,7 +11,9 @@ https://github.com/FluidSynth/fluidsynth/wiki/Download
 
 #### Linux install
 
-    sudo apt-get install fluidsynth
+    sudo apt install libasound2-dev
+    ? sudo apt install fluidsynth # is this needed if we do the -dev?
+    sudo apt install libfluidsynth-dev
 
 #### mac install
 

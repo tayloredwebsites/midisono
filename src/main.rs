@@ -1,4 +1,4 @@
-// rustedmusic 
+// rustedmusic
 extern crate midir;
 use midir::{MidiInput, MidiIO, Ignore as MidiIgnore};  // midi input library
 
@@ -37,6 +37,9 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
 
+    const channel: i32 = 0; // only using channel 0 for now
+    const bank_num: u32 = 0; // only using bank_num 0 for now
+
     let (tx_from_midi, rx_to_synth) = mpsc::channel::<[u8; 3]>();
 
     // create the default synthesizer settings
@@ -48,15 +51,22 @@ fn run() -> Result<(), Box<dyn Error>> {
     // set the audio driver to PulseAudio
     settings.setstr("audio.driver", "pulseaudio");
     let _adriver = FluidAudio::new(&mut settings, &mut syn);
-    syn.sfload("/home/dave/Lib/SoundFonts/FluidR3_GM.sf2", 1);
 
-    let mut input = String::new();
-    
+    let sf_id = syn.sfload("/media/dave/TowerData1/AudioFiles/SoundFonts/FluidR3_GM/FluidR3_GM.sf2", 1)
+        .expect("invalid sf_id");
+
+    println!("sfcount: {}", syn.sfcount());
+
+    println!("Returned sound font ID: {}", sf_id);
+    // select program voice from on FluidR3_GM sound font
+    // syn.program_select(channel,1,0,19);
+    select_program_voice(&syn, channel, sf_id, bank_num);
+
     let mut midi_in = MidiInput::new("midir reading input")?;
     midi_in.ignore(MidiIgnore::None);
-    
+
     let in_port = select_port(&midi_in, "input")?;
-    
+
     println!("\nOpening connection");
     // let in_port_name = (midi_in.port_name(&in_port)).clone().unwrap();
 
@@ -66,7 +76,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     // let _conn_in = thread::spawn(move || {
     //     midi_in.connect(&in_port, &in_port_name, move |stamp, message, _| {
-        let _conn_in = midi_in.connect(&in_port, &in_port_name, move |stamp, message, _| {
+        let _conn_in = midi_in.connect(&in_port, &in_port_name, move |_stamp, message, _| {
             let msg = [message[0].clone(), message[1].clone(), message[2].clone()];
             // tx_from_midi.send(msg).unwrap_or_else(|_error) => | println!("Error when forwarding message ..."));
             tx_from_midi.send(msg).unwrap();
@@ -87,16 +97,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // });
 
 
-    // confirm synthesizer plays notes
-    for _x in 0..12 {
-        let num: i32 = thread_rng().gen_range(0..12);
-        let key = 60 + num;
-        syn.noteon(0, key, 80);
-        thread::sleep(Duration::from_millis(100));
-        syn.noteoff(0, key);
-    }
-
-    // need to get shut down message 
+    // need to get shut down message
     for message in rx_to_synth {
         println!("Got: {:#?}", message);
         let [msg, note, force] = message;
@@ -116,16 +117,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         }
         println!("{}: {:?} {:?} (len = {})", msg, note, force, message.len());
     }
-    
-
-    // // confirm synthesizer plays notes
-    // for _x in 0..12 {
-    //     let num: i32 = thread_rng().gen_range(0..12);
-    //     let key = 60 + num;
-    //     syn.noteon(0, key, 80);
-    //     thread::sleep(Duration::from_secs(1));
-    //     syn.noteoff(0, key);
-    // }
 
     Ok(())
 }
@@ -158,4 +149,44 @@ fn select_port<T: MidiIO>(midi_io: &T, descr: &str) -> Result<T::Port, Box<dyn E
             return Err(Box::new(StrError("Missing Port")))
         },
     }
+}
+
+
+// function to choose a program/voice
+fn select_program_voice(syn: &fluidsynth::synth::Synth,
+        channel: i32,
+        sfont_id: u32,
+        bank_num: u32
+    ) -> u32 {
+    println!("Enter Program/Voice number");
+    let mut input_str = String::new();
+    let mut voice: u32 = 0;
+    while input_str != "y" && input_str != "Y" {
+        stdin()
+            .read_line(&mut input_str)
+            .expect("failed to read in sound font number");
+        match input_str.trim().parse::<u32>() {
+            Ok(n) => voice = n,
+            Err(_e) => voice = 0,
+        }
+
+        syn.program_select(channel, sfont_id, bank_num, voice);
+
+        // confirm voice is the one wanted by playing some random notes
+        for _x in 0..12 {
+            let num: i32 = thread_rng().gen_range(0..12);
+            let key = 60 + num;
+            syn.noteon(channel, key, 80);
+            thread::sleep(Duration::from_millis(100));
+            syn.noteoff(channel, key);
+        }
+
+        input_str = String::new();
+        println!("Is this the correct Program/Voice? (y)");
+        stdin()
+            .read_line(&mut input_str)
+            .expect("failed to read in sound font number");
+    }
+
+    voice
 }
