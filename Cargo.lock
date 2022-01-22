@@ -228,7 +228,7 @@ dependencies = [
  "core-foundation",
  "core-foundation-sys",
  "coremidi-sys",
- "time 0.1.43",
+ "time",
 ]
 
 [[package]]
@@ -432,6 +432,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "midisono"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "fluidsynth",
+ "midir",
+ "rand",
+ "time",
+]
+
+[[package]]
 name = "nix"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -451,15 +462,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19e64526ebdee182341572e50e9ad03965aa510cd94427a4549448f285e957a1"
 dependencies = [
  "hermit-abi",
- "libc",
-]
-
-[[package]]
-name = "num_threads"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71a1eb3a36534514077c1e079ada2fb170ef30c47d203aa6916138cf882ecd52"
-dependencies = [
  "libc",
 ]
 
@@ -571,17 +573,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustedmusic"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "fluidsynth",
- "midir",
- "rand",
- "time 0.3.6",
-]
-
-[[package]]
 name = "slab"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -616,16 +607,6 @@ checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
 dependencies = [
  "libc",
  "winapi",
-]
-
-[[package]]
-name = "time"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8d54b9298e05179c335de2b9645d061255bcd5155f843b3e328d2cfe0a5b413"
-dependencies = [
- "libc",
- "num_threads",
 ]
 
 [[package]]
