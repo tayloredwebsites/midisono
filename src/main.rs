@@ -2,7 +2,7 @@
 extern crate midir;
 use midir::{MidiInput, MidiIO, Ignore as MidiIgnore};  // midi input library
 
-// use fluidsynth::*;  // fluid synth rust interface
+// rust-fluidsynth - fluidsynth rust interface
 use fluidsynth::settings::Settings as FluidSettings;
 use fluidsynth::synth::Synth as FluidSynth;
 use fluidsynth::audio::AudioDriver as FluidAudio;
@@ -10,14 +10,13 @@ use fluidsynth::audio::AudioDriver as FluidAudio;
 use rand::{thread_rng, Rng};
 use std::thread;
 use std::time::Duration;
-// use async_std::task;
 
 use std::io::{stdin, stdout, Write};
 use std::error::Error;
 use std::sync::mpsc; // multi processor single consumer for thread messages
 use std::fmt;
 
-// ability create a boxed error from a string
+// StrError - simple error from a string (boxed)
 #[derive(Debug)]
 struct StrError<'a>(&'a str);
 impl<'a> Error for StrError<'a> {}
@@ -31,36 +30,40 @@ impl<'a> fmt::Display for StrError<'a>{
 fn main() {
     match run() {
         Ok(_) => (),
-        Err(err) => println!("Error: {}", err)
+        Err(err) => eprintln!("Error: {}", err)
     }
+
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
 
-    const channel: i32 = 0; // only using channel 0 for now
-    const bank_num: u32 = 0; // only using bank_num 0 for now
+    const CHANNEL: i32 = 0; // only using one channel, CHANNEL 0 for now
+    const BANK_NUM: u32 = 0; // only using one bank number, BANK_NUM 0 for now
 
+    // send from midi thread to synth
     let (tx_from_midi, rx_to_synth) = mpsc::channel::<[u8; 3]>();
 
-    // create the default synthesizer settings
+    // create the default fluidsynth settings
     let mut settings = FluidSettings::new();
 
     // create the synthesizer using the settings
     let mut syn = FluidSynth::new(&mut settings);
 
     // set the audio driver to PulseAudio
+    // ToDo: let user select audio driver, and verify it is working
     settings.setstr("audio.driver", "pulseaudio");
     let _adriver = FluidAudio::new(&mut settings, &mut syn);
 
-    let sf_id = syn.sfload("/media/dave/TowerData1/AudioFiles/SoundFonts/FluidR3_GM/FluidR3_GM.sf2", 1)
+    // load the FluidR3_GM Sound font
+    let sf_id = syn.sfload("assets/FluidR3_GM/FluidR3_GM.sf2", 1)
         .expect("invalid sf_id");
 
-    println!("sfcount: {}", syn.sfcount());
+    // println!("sfcount: {}", syn.sfcount());
 
     println!("Returned sound font ID: {}", sf_id);
     // select program voice from on FluidR3_GM sound font
     // syn.program_select(channel,1,0,19);
-    select_program_voice(&syn, channel, sf_id, bank_num);
+    let _voice = select_program_voice(&syn, CHANNEL, sf_id, BANK_NUM);
 
     let mut midi_in = MidiInput::new("midir reading input")?;
     midi_in.ignore(MidiIgnore::None);
@@ -79,7 +82,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         let _conn_in = midi_in.connect(&in_port, &in_port_name, move |_stamp, message, _| {
             let msg = [message[0].clone(), message[1].clone(), message[2].clone()];
             // tx_from_midi.send(msg).unwrap_or_else(|_error) => | println!("Error when forwarding message ..."));
-            tx_from_midi.send(msg).unwrap();
+            tx_from_midi.send(msg).expect("Error handling message from MidiInput");
             // task::sleep(Duration::from_millis(1)).await;   // async sleep function to unblock loop
             thread::sleep(Duration::from_millis(1));   // blocking sleep function
         }, ());  // close midi_in.connect  Note: no ? cannot use in a closure that returns '()'
@@ -158,17 +161,19 @@ fn select_program_voice(syn: &fluidsynth::synth::Synth,
         sfont_id: u32,
         bank_num: u32
     ) -> u32 {
-    println!("Enter Program/Voice number");
     let mut input_str = String::new();
     let mut voice: u32 = 0;
     while input_str != "y" && input_str != "Y" {
+        println!("Enter Program/Voice number");
         stdin()
             .read_line(&mut input_str)
-            .expect("failed to read in sound font number");
-        match input_str.trim().parse::<u32>() {
+            .expect("failed to read in program/voice number");
+        input_str = String::from(input_str.trim());
+        match input_str.parse::<u32>() {
             Ok(n) => voice = n,
             Err(_e) => voice = 0,
         }
+        println!("selected voide of of: {} - {}", input_str, voice);
 
         syn.program_select(channel, sfont_id, bank_num, voice);
 
@@ -185,8 +190,11 @@ fn select_program_voice(syn: &fluidsynth::synth::Synth,
         println!("Is this the correct Program/Voice? (y)");
         stdin()
             .read_line(&mut input_str)
-            .expect("failed to read in sound font number");
+            .expect("failed to read in confirmation string");
+            input_str = String::from(input_str.trim());
+            println!("returned input_str of: '{}'", input_str);
     }
+    println!("Chose this Program / Voice - Play on.");
 
     voice
 }
