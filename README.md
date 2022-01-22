@@ -26,7 +26,7 @@ https://github.com/FluidSynth/fluidsynth/wiki/Download
 https://member.keymusician.com/Member/FluidR3_GM/FluidR3_GM.zip
 
 2 Unzip and place in assets folder
-  - Note: the assets folder should contain a directory called FluidR3_GM with 4 files in it.
+  - Note: the assets/SoundFonts folder should contain a directory called FluidR3_GM with 4 files in it.
 
 #### ToDo: allow user to select sound font folder
 
