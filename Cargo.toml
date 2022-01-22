@@ -1,5 +1,5 @@
 [package]
-name = "rustedmusic"
+name = "midisono"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,10 @@ time = "*"
 midir = "0.7.0"
 async-std = "1.10.0"
 
-# rust fluidsynth interface is not in crates.io!!
-# in github by scholtzan, but not maintained, emailed with no response.
+
 [dependencies.fluidsynth]
+
+# rust-fluidsynth interface is not in crates.io!!
+# in github by scholtzan, but not maintained, emailed with no response.
+# nothing seems to be needed to update on it, except possibly docs
 git = "https://github.com/tayloredwebsites/rust-fluidsynth"
